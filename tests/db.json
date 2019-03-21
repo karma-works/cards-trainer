@@ -1,0 +1,23 @@
+{
+  "questions": [
+    {
+      "type": "freeText",
+      "question": "Geburtsort",
+      "correctAnswer": "出生地",
+      "hint": "It begins with B"
+    },
+    {
+      "type": "freeText",
+      "question": "Nationalität",
+      "correctAnswer": "国籍",
+      "hint": "It begins with B"
+    },
+    {
+      "type": "freeText",
+      "question": "Schauspieler",
+      "correctAnswer": "演员",
+      "hint": ""
+    }
+  ]
+
+}
