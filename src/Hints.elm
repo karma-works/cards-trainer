@@ -15,6 +15,7 @@ import Bootstrap.Utilities.Display as Display
 import Bootstrap.Utilities.Spacing as Spacing
 import Browser
 import Debug exposing (toString)
+import Dict exposing (Dict)
 import Html as Input exposing (Html, div, pre, span, text)
 import Html.Attributes as Input exposing (attribute, class, for, href, placeholder, readonly, value)
 import Http exposing (Error(..))
@@ -47,7 +48,9 @@ subscriptions model =
 
 
 type alias Model =
-    { popoverState : Popover.State }
+    { popoverState : Dict Int Popover.State
+    , popoverCounter : Int
+    }
 
 
 
@@ -55,7 +58,7 @@ type alias Model =
 
 
 type Msg
-    = PopoverMsg Popover.State
+    = PopoverMsg Int Popover.State
 
 
 
@@ -64,7 +67,7 @@ type Msg
 
 initialState : () -> ( Model, Cmd Msg )
 initialState _ =
-    ( { popoverState = Popover.initialState }, Cmd.none )
+    ( { popoverState = Dict.fromList [], popoverCounter = 0 }, Cmd.none )
 
 
 
@@ -74,8 +77,25 @@ initialState _ =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        PopoverMsg state ->
-            ( { model | popoverState = state }, Cmd.none )
+        PopoverMsg index state ->
+            ( { model | popoverState = setPopoverState index state model.popoverState }, Cmd.none )
+
+
+setPopoverState : Int -> Popover.State -> Dict Int Popover.State -> Dict Int Popover.State
+setPopoverState index record records =
+    Dict.update index (mapRecords record) records
+
+
+mapRecords : Popover.State -> Maybe Popover.State -> Maybe Popover.State
+mapRecords record previousRecord =
+    case previousRecord of
+        _ ->
+            Just record
+
+
+getPopoverState : Int -> Dict Int Popover.State -> Popover.State
+getPopoverState id records =
+    Maybe.withDefault Popover.initialState (Dict.get id records)
 
 
 
@@ -87,24 +107,7 @@ view model =
     Form.group []
         [ CDN.stylesheet
         , Form.label []
-            [ text "Username "
-            , Popover.config
-                (Button.button
-                    [ Button.small
-                    , Button.primary
-                    , Button.attrs <|
-                        Popover.onClick model.popoverState PopoverMsg
-                    ]
-                    [ span [ class "fa fa-question-circle" ]
-                        []
-                    ]
-                )
-                |> Popover.right
-                |> Popover.titleH4 [] [ text "Username help" ]
-                |> Popover.content []
-                    [ text "Your username must not contain numbers..." ]
-                |> Popover.view model.popoverState
-            , withHints model testPhrase testHints
+            [ withHints model testPhrase testHints
             ]
         ]
 
@@ -123,18 +126,18 @@ withHints model phrase hints =
         listOfWords =
             String.words phrase
     in
-    div [] <| List.map2 (mapHint model) listOfWords hints
+    div [] <| List.map3 (mapHint model) listOfWords hints <| List.range 0 <| List.length hints
 
 
-mapHint : Model -> String -> String -> Html Msg
-mapHint model word hint =
+mapHint : Model -> String -> String -> Int -> Html Msg
+mapHint model word hint index =
     if String.isEmpty hint then
         pre [] [ span [] [ text word ] ]
 
     else
         Popover.config
             (pre []
-                [ span (class "fa fa-question-circle" :: Popover.onClick model.popoverState PopoverMsg)
+                [ span (class "fa fa-question-circle" :: Popover.onClick (getPopoverState index model.popoverState) (PopoverMsg index))
                     [ text <| word ++ " " ]
                 ]
             )
@@ -142,4 +145,4 @@ mapHint model word hint =
             |> Popover.titleH4 [] [ text "Word Help" ]
             |> Popover.content []
                 [ text hint ]
-            |> Popover.view model.popoverState
+            |> Popover.view (getPopoverState index model.popoverState)
