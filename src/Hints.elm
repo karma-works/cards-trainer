@@ -83,7 +83,7 @@ update msg model =
 
 setPopoverState : Int -> Popover.State -> Dict Int Popover.State -> Dict Int Popover.State
 setPopoverState index record records =
-    Dict.update index (mapRecords record) records
+    Dict.update index (mapRecords record) (Dict.map (\_ _ -> Popover.initialState) records)
 
 
 mapRecords : Popover.State -> Maybe Popover.State -> Maybe Popover.State
