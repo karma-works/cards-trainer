@@ -12,7 +12,7 @@ _npm install -g json-server_
 
 for more information see https://github.com/typicode/json-server
 
-# #Usage
+## Usage
 Start the project with
 
 _elm reactor_
