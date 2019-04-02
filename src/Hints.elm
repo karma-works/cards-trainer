@@ -1,28 +1,13 @@
 module Hints exposing (Model, Msg(..), initialState, main, mapHint, subscriptions, testHints, testPhrase, update, view, withHints)
 
-import Basics as Math
-import Bootstrap.Alert as Alert
-import Bootstrap.Button as Button exposing (..)
 import Bootstrap.CDN as CDN
 import Bootstrap.Form as Form
-import Bootstrap.Form.Input as BSImput
-import Bootstrap.Form.Textarea as Textarea
-import Bootstrap.Grid as Grid
-import Bootstrap.Navbar as Navbar exposing (..)
 import Bootstrap.Popover as Popover
-import Bootstrap.Progress as Progress
-import Bootstrap.Utilities.Display as Display
-import Bootstrap.Utilities.Spacing as Spacing
 import Browser
-import Debug exposing (toString)
 import Dict exposing (Dict)
-import Html as Input exposing (Html, div, pre, span, text)
-import Html.Attributes as Input exposing (attribute, class, for, href, placeholder, readonly, value)
-import Http exposing (Error(..))
-import Json.Decode exposing (Decoder, Error(..), field, map3, string)
-import List exposing (head)
-import Maybe.Extra
-import String.Extra as Extra exposing (softBreak)
+import Html exposing (Html, div, pre, span, text)
+import Html.Attributes exposing (class)
+import List
 
 
 
@@ -110,6 +95,8 @@ view model =
             [ withHints model testPhrase testHints
             ]
         ]
+
+
 
 
 testPhrase =

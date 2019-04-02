@@ -1,22 +1,22 @@
 {
   "questions": [
     {
-      "type": "freeText",
-      "question": "Geburtsort",
-      "correctAnswer": "出生地",
-      "hint": "It begins with B"
+      "type": "freeText"
+      , "question": [{"text": "Geburtsort", "pronunciation": "pinyin", "hint": "It begins with B" }]
+      , "answer": [{"text":  "出生地", "pronunciation":  "pinyin", "hint":""}]
+      , "acceptedAnswer": ["出生地"]
     },
     {
-      "type": "freeText",
-      "question": "Nationalität",
-      "correctAnswer": "国籍",
-      "hint": "It begins with B"
+      "type": "freeText"
+      , "question": [{"text": "Nationalität", "pronunciation": "pinyin","hint": "It begins with B" }]
+      , "answer": [{"text":"国籍", "pronunciation": "pinyin", "hint":""}]
+      , "acceptedAnswer": ["国籍"]
     },
     {
-      "type": "freeText",
-      "question": "Schauspieler",
-      "correctAnswer": "演员",
-      "hint": ""
+      "type": "freeText"
+      , "question": [{"text": "Schauspieler", "pronunciation": "pinyin", "hint": "It begins with B" }]
+      , "answer": [{"text": "演员", "pronunciation": "pinyin", "hint":""}]
+      , "acceptedAnswer": ["演员"]
     }
   ]
 

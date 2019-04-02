@@ -19,7 +19,6 @@ import Html.Attributes exposing (for, href, placeholder, readonly, value)
 import Http exposing (Error(..))
 import Json.Decode exposing (Decoder, Error(..), field, map3, string)
 import List exposing (head)
-import Maybe.Extra
 
 
 
@@ -38,18 +37,23 @@ main =
 
 -- Model
 
+type alias Word = {
+    text: String
+    , pronunciation: String
+    , hint: String
+    }
 
 type alias Card =
-    { question : String
-    , correctAnswer : String
-    , hint : String
+    { question : List Word
+      , answer: List Word
+    , acceptedAnswer : List String
     }
 
 
 type InteractionState
     = AnswerCorrect String
     | AnswerIncorrect String
-    | Question
+    | Question Card
     | Error String
     | Loading
 
@@ -66,9 +70,15 @@ loadCards =
         }
 
 
+decodeWord : Json.Decode.Decoder Word
+decodeWord = map3 Word (field "text" string) (field "pronunciation" string) (field "hint" string)
+
+decodeWords : Json.Decode.Decoder (List Word)
+decodeWords = Json.Decode.list decodeWord
+
 decodeCard : Json.Decode.Decoder Card
 decodeCard =
-    map3 Card (field "question" string) (field "correctAnswer" string) (field "hint" string)
+    map3 Card (field "question" decodeWords) (field "answer" decodeWords) (field "acceptedAnswer" (Json.Decode.list string) )
 
 
 decodeCards : Json.Decode.Decoder (List Card)
@@ -111,8 +121,8 @@ update msg model =
             case result of
                 Ok cards ->
                     case head cards of
-                        Just _ ->
-                            ( { model | cards = cards, state = Question }, Cmd.none )
+                        Just card ->
+                            ( { model | cards = cards, state = Question card}, Cmd.none )
 
                         _ ->
                             ( { model | state = Error "We can't show you new questions at the moment, probably a connectivity issue. Try again later" }, Cmd.none )
@@ -127,23 +137,25 @@ update msg model =
         CheckAnswer userAnswer ->
             case head model.cards of
                 Just card ->
-                    if userAnswer == card.correctAnswer then
+                    if List.member userAnswer card.acceptedAnswer then
                         ( { model | state = AnswerCorrect "Correct! ", progress = model.progress + 1 }, Cmd.none )
 
                     else
-                        ( { model | state = AnswerIncorrect <| "Incorrect. The correct answer is «" ++ card.correctAnswer ++ "».", progress = max 0 (model.progress - 1) }, Cmd.none )
+                        ( { model | state = AnswerIncorrect <| "Incorrect. The correct answer is «" ++ (Maybe.withDefault "" (head card.acceptedAnswer) ) ++ "».", progress = max 0 (model.progress - 1) }, Cmd.none )
 
                 _ ->
                     ( { model | state = AnswerCorrect "Could not load new questions. Probably this is because I can't connect to our service" }, Cmd.none )
 
         AskNewQuestion ->
-            ( { model | state = Question, cards = List.drop 1 model.cards, answer = "", valid = False }
-            , if List.length model.cards > 1 then
-                Cmd.none
+            case head model.cards of
+                Just card ->
+                    ( { model | state = Question card, cards = List.drop 1 model.cards, answer = "", valid = False }, if List.length model.cards > 1 then
+                    Cmd.none
+                    else
+                    loadCards
+                    )
+                _ -> ( { model | state =  AnswerCorrect "Could not load new questions. Probably this is because I can't connect to our service"  }, Cmd.none )
 
-              else
-                loadCards
-            )
 
 
 
@@ -198,7 +210,7 @@ quizSection model =
         []
         [ h1 [] [ text "Quiz" ]
         , Form.group []
-            [ Form.row [] [ Form.col [] [ h2 [] [ text (Maybe.Extra.unwrap "" .question (head model.cards)) ] ] ]
+            [ Form.row [] [ Form.col [] [ h2 [] [ text <| questionText model.state] ] ]
             , Form.row []
                 [ Form.col [] <|
                     quizFreeText model
@@ -211,12 +223,22 @@ quizSection model =
             ]
         ]
 
+questionText : InteractionState -> String
+questionText state = case state of
+    Question card ->
+           card.question |> List.map .text |> List.foldl (++) ""
+    _ -> ""
 
 quizFreeText : Model -> List (Html Msg)
 quizFreeText model =
     [ Form.label [ for "your-answer" ] [ text "Your Answer " ]
-    , Textarea.textarea [ Textarea.id "your-answer", Textarea.onInput ChangeAnswer, Textarea.attrs [ readonly (not (model.state == Question)), placeholder "Type your answer here", value model.answer ] ]
+    , Textarea.textarea [ Textarea.id "your-answer", Textarea.onInput ChangeAnswer, Textarea.attrs [ readonly (not (questionState model)), placeholder "Type your answer here", value model.answer ] ]
     ]
+
+questionState: Model -> Bool
+questionState model = case model.state of
+    Question _-> True
+    _ -> False
 
 
 submitButton : Model -> Html Msg
@@ -233,7 +255,7 @@ submitButton model =
 submitVisible : InteractionState -> Input.Attribute msg
 submitVisible state =
     case state of
-        Question ->
+        Question _->
             Display.inline
 
         _ ->
@@ -336,6 +358,7 @@ httpErrorString error =
 
         BadStatus response ->
             "Bad Http Status: " ++ toString response
-
-        _ ->
-            "An unknown http error occurred"
+        BadBody response ->
+            "Bad Http Body: " ++ response
+--        _ ->
+--            "An unknown http error occurred"
