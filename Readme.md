@@ -12,7 +12,9 @@ _npm install -g json-server_
 
 for more information see https://github.com/typicode/json-server
 
-##Usage
+##Run the Sample Application
+The sample application is a chinese vocabulary trainer (as Chinese seems to be the most complicated language to train vocabulary for)
+
 Start the project with
 
 _elm reactor_

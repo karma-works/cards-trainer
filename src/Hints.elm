@@ -1,4 +1,4 @@
-module Hints exposing (Model, Msg(..), initialState, main, mapHint, subscriptions, testHints, testPhrase, update, view, withHints)
+module Hints exposing (Model, Msg(..), initialState, main, wordElementView, subscriptions, update, view, withWordElements)
 
 import Bootstrap.CDN as CDN
 import Bootstrap.Form as Form
@@ -8,6 +8,7 @@ import Dict exposing (Dict)
 import Html exposing (Html, div, pre, span, text)
 import Html.Attributes exposing (class)
 import List
+import Main exposing (Word)
 
 
 
@@ -92,44 +93,38 @@ view model =
     Form.group []
         [ CDN.stylesheet
         , Form.label []
-            [ withHints model testPhrase testHints
+            [ withWordElements model testWords
             ]
         ]
 
 
 
+type alias Phrase = List Word
 
-testPhrase =
-    "Your username, must not contain numbers."
-
-
-testHints =
-    [ "1", "2", "3", "4", "5", "" ]
+testWords = [{ text="Nationalität",  pronunciation="pinyin",  hint="It begins with B" }, {text = "Geburtsort", pronunciation = "pinyin", hint = "It begins with B" }]
 
 
-withHints : Model -> String -> List String -> Html Msg
-withHints model phrase hints =
-    let
-        listOfWords =
-            String.words phrase
-    in
-    div [] <| List.map3 (mapHint model) listOfWords hints <| List.range 0 <| List.length hints
+withWordElements : Model -> Phrase -> Html Msg
+withWordElements model phrase  =
+    div [] <| List.map2 (wordElementView model) phrase <| List.range 0 <| List.length phrase
 
 
-mapHint : Model -> String -> String -> Int -> Html Msg
-mapHint model word hint index =
-    if String.isEmpty hint then
-        pre [] [ span [] [ text word ] ]
+wordElementView : Model -> Word -> Int -> Html Msg
+wordElementView model word index =
+    if String.isEmpty word.hint then
+        pre [] [ div [] [ text word.pronunciation ], div [] [ text word.text ] ]
 
     else
         Popover.config
             (pre []
-                [ span (class "fa fa-question-circle" :: Popover.onClick (getPopoverState index model.popoverState) (PopoverMsg index))
-                    [ text <| word ++ " " ]
+                [ div [] [ text word.pronunciation ]
+                , div (class "fa fa-question-circle" :: Popover.onClick (getPopoverState index model.popoverState) (PopoverMsg index))
+                    [ text <| word.text ++ " " ]
+
                 ]
             )
             |> Popover.bottom
-            |> Popover.titleH4 [] [ text "Word Help" ]
+            |> Popover.titleH4 [] [ text word.text ]
             |> Popover.content []
-                [ text hint ]
+                [ text word.hint ]
             |> Popover.view (getPopoverState index model.popoverState)
