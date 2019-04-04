@@ -93,7 +93,8 @@ view model =
     Form.group []
         [ CDN.stylesheet
         , Form.label []
-            [ withWordElements model testWords
+            [ withWordElements model.popoverState []
+--             words go here as last parameter
             ]
         ]
 
@@ -101,16 +102,15 @@ view model =
 
 type alias Phrase = List Word
 
-testWords = [{ text="Nationalität",  pronunciation="pinyin",  hint="It begins with B" }, {text = "Geburtsort", pronunciation = "pinyin", hint = "It begins with B" }]
 
 
-withWordElements : Model -> Phrase -> Html Msg
-withWordElements model phrase  =
-    div [] <| List.map2 (wordElementView model) phrase <| List.range 0 <| List.length phrase
+withWordElements : Dict Int Popover.State -> Phrase -> Html Msg
+withWordElements popoverState phrase  =
+    div [] <| List.map2 (wordElementView popoverState) phrase <| List.range 0 <| List.length phrase
 
 
-wordElementView : Model -> Word -> Int -> Html Msg
-wordElementView model word index =
+wordElementView : Dict Int Popover.State -> Word -> Int -> Html Msg
+wordElementView popoverState word index =
     if String.isEmpty word.hint then
         pre [] [ div [] [ text word.pronunciation ], div [] [ text word.text ] ]
 
@@ -118,7 +118,7 @@ wordElementView model word index =
         Popover.config
             (pre []
                 [ div [] [ text word.pronunciation ]
-                , div (class "fa fa-question-circle" :: Popover.onClick (getPopoverState index model.popoverState) (PopoverMsg index))
+                , div (class "fa fa-question-circle" :: Popover.onClick (getPopoverState index popoverState) (PopoverMsg index))
                     [ text <| word.text ++ " " ]
 
                 ]
@@ -127,4 +127,4 @@ wordElementView model word index =
             |> Popover.titleH4 [] [ text word.text ]
             |> Popover.content []
                 [ text word.hint ]
-            |> Popover.view (getPopoverState index model.popoverState)
+            |> Popover.view (getPopoverState index popoverState)
