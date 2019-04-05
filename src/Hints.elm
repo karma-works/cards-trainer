@@ -1,5 +1,6 @@
-module Hints exposing (Model, Msg(..), initialState, main, wordElementView, subscriptions, update, view, withWordElements)
+module Hints exposing (setPopoverState, initialModelValues, HintMsgModel, Word, HintModel, Msg(..), initialState, main, wordElementView, subscriptions, update, view, withWordElements)
 
+import Array
 import Bootstrap.CDN as CDN
 import Bootstrap.Form as Form
 import Bootstrap.Popover as Popover
@@ -8,9 +9,14 @@ import Dict exposing (Dict)
 import Html exposing (Html, div, pre, span, text)
 import Html.Attributes exposing (class)
 import List
-import Main exposing (Word)
 
 
+
+type alias Word = {
+    text: String
+    , pronunciation: String
+    , hint: String
+    }
 
 -- MAIN
 
@@ -32,10 +38,38 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.none
 
+type HintModel = HintModel {
+    popoverState : Dict Int Popover.State
+    , phrase: Phrase
+    }
+
+initialModelValues:  HintModel
+initialModelValues = setModelValues (Dict.fromList []) []
+getModelValues: HintModel -> (Dict Int Popover.State, Phrase)
+getModelValues (HintModel {popoverState, phrase }) = (popoverState, phrase)
+
+getModelPopoverStates: HintModel -> Dict Int Popover.State
+getModelPopoverStates (HintModel model) = model.popoverState
+
+getModelPhrase: HintModel -> Phrase
+getModelPhrase  (HintModel model) = model.phrase
+
+setModelPopupStates: HintModel -> Dict Int Popover.State -> HintModel
+setModelPopupStates model newState = setModelValues newState <| getModelPhrase model
+
+setModelValues: Dict Int Popover.State -> Phrase -> HintModel
+setModelValues state phrase = HintModel {popoverState = state, phrase = phrase}
+
+type HintMsgModel = HintMsgModel {
+    index: Int
+    , state: Popover.State
+    }
+
+createHintMsgModel: Int -> Popover.State -> HintMsgModel
+createHintMsgModel index state = HintMsgModel { index = index,  state = state }
 
 type alias Model =
-    { popoverState : Dict Int Popover.State
-    , popoverCounter : Int
+    { popoverState : HintModel
     }
 
 
@@ -44,7 +78,7 @@ type alias Model =
 
 
 type Msg
-    = PopoverMsg Int Popover.State
+    = PopoverMsg HintMsgModel
 
 
 
@@ -53,7 +87,7 @@ type Msg
 
 initialState : () -> ( Model, Cmd Msg )
 initialState _ =
-    ( { popoverState = Dict.fromList [], popoverCounter = 0 }, Cmd.none )
+    ( Model ( initialModelValues ), Cmd.none )
 
 
 
@@ -63,13 +97,17 @@ initialState _ =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        PopoverMsg index state ->
-            ( { model | popoverState = setPopoverState index state model.popoverState }, Cmd.none )
+        PopoverMsg hintMsgModel ->
+            ( { model | popoverState = setPopoverState hintMsgModel <| model.popoverState }, Cmd.none )
 
 
-setPopoverState : Int -> Popover.State -> Dict Int Popover.State -> Dict Int Popover.State
-setPopoverState index record records =
-    Dict.update index (mapRecords record) (Dict.map (\_ _ -> Popover.initialState) records)
+setPopoverState : HintMsgModel -> HintModel -> HintModel
+setPopoverState (HintMsgModel hintMsgModel) hintModel =
+    let
+        records = getModelPopoverStates hintModel
+        updatedStates = Dict.update hintMsgModel.index (mapRecords hintMsgModel.state) (Dict.map (\_ _ -> Popover.initialState) records)
+    in
+        setModelPopupStates hintModel updatedStates
 
 
 mapRecords : Popover.State -> Maybe Popover.State -> Maybe Popover.State
@@ -93,7 +131,7 @@ view model =
     Form.group []
         [ CDN.stylesheet
         , Form.label []
-            [ withWordElements model.popoverState []
+            [ withWordElements model.popoverState
 --             words go here as last parameter
             ]
         ]
@@ -104,27 +142,40 @@ type alias Phrase = List Word
 
 
 
-withWordElements : Dict Int Popover.State -> Phrase -> Html Msg
-withWordElements popoverState phrase  =
-    div [] <| List.map2 (wordElementView popoverState) phrase <| List.range 0 <| List.length phrase
+withWordElements : HintModel -> Html Msg
+withWordElements hintModel  =
+    let
+        (_, phrase) = getModelValues hintModel
+    in
+        div [] <| (List.length phrase |> List.range 0 |> List.map (wordElementView hintModel))
 
 
-wordElementView : Dict Int Popover.State -> Word -> Int -> Html Msg
-wordElementView popoverState word index =
-    if String.isEmpty word.hint then
-        pre [] [ div [] [ text word.pronunciation ], div [] [ text word.text ] ]
+wordElementView : HintModel -> Int -> Html Msg
+wordElementView model index =
+    let
+        (popoverState, phrase) = getModelValues model
+        word = Array.fromList phrase |> Array.get index |> Maybe.withDefault emptyWord
+    in
+        if String.isEmpty word.hint then
+            pre [] [ div [] [ text word.pronunciation ], div [] [ text word.text ] ]
 
-    else
-        Popover.config
-            (pre []
-                [ div [] [ text word.pronunciation ]
-                , div (class "fa fa-question-circle" :: Popover.onClick (getPopoverState index popoverState) (PopoverMsg index))
-                    [ text <| word.text ++ " " ]
+        else
+            Popover.config
+                (pre []
+                    [ div [] [ text word.pronunciation ]
+                    , div (class "fa fa-question-circle" :: Popover.onClick (getPopoverState index popoverState) (\state -> PopoverMsg <| createHintMsgModel index state))
+                        [ text <| word.text ++ " " ]
+                    ]
+                )
+                |> Popover.bottom
+                |> Popover.titleH4 [] [ text word.text ]
+                |> Popover.content []
+                    [ text word.hint ]
+                |> Popover.view (getPopoverState index popoverState)
 
-                ]
-            )
-            |> Popover.bottom
-            |> Popover.titleH4 [] [ text word.text ]
-            |> Popover.content []
-                [ text word.hint ]
-            |> Popover.view (getPopoverState index popoverState)
+
+emptyWord = {
+    text =  ""
+    , pronunciation =  ""
+    , hint =  ""
+    }

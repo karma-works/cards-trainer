@@ -14,6 +14,7 @@ import Bootstrap.Utilities.Display as Display
 import Bootstrap.Utilities.Spacing as Spacing
 import Browser
 import Debug exposing (toString)
+import Hints exposing (HintModel, HintMsgModel, Word)
 import Html as Input exposing (Html, div, h1, h2, text)
 import Html.Attributes exposing (for, href, placeholder, readonly, value)
 import Http exposing (Error(..))
@@ -37,11 +38,6 @@ main =
 
 -- Model
 
-type alias Word = {
-    text: String
-    , pronunciation: String
-    , hint: String
-    }
 
 type alias Card =
     { question : List Word
@@ -59,7 +55,7 @@ type InteractionState
 
 
 type alias Model =
-    { cards : List Card, state : InteractionState, answer : String, navbarState : Navbar.State, valid : Bool, progress : Int }
+    { cards : List Card, state : InteractionState, answer : String, navbarState : Navbar.State, valid : Bool, progress : Int, hintState : HintModel}
 
 
 loadCards : Cmd Msg
@@ -96,7 +92,7 @@ init _ =
         ( navbarState, _ ) =
             Navbar.initialState NavbarMsg
     in
-    ( { cards = [], state = Loading, answer = "", navbarState = navbarState, valid = False, progress = 0 }, loadCards )
+    ( { cards = [], state = Loading, answer = "", navbarState = navbarState, valid = False, progress = 0, hintState = Hints.initialModelValues }, loadCards )
 
 
 type Msg
@@ -105,6 +101,7 @@ type Msg
     | AskNewQuestion
     | NavbarMsg Navbar.State
     | ReceivedCards (Result Http.Error (List Card))
+    | HintMsg HintMsgModel
 
 
 
@@ -155,6 +152,8 @@ update msg model =
                     loadCards
                     )
                 _ -> ( { model | state =  AnswerCorrect "Could not load new questions. Probably this is because I can't connect to our service"  }, Cmd.none )
+
+        HintMsg (state)->  ( { model | hintState = Hints.setPopoverState state <| model.hintState }, Cmd.none )
 
 
 
